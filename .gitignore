@@ -1,0 +1,22 @@
+# build output
+*.o
+*.obj
+*.elf
+*.bin
+*.hex
+*.out
+*.exe
+
+# assembler/linker byproducts
+*.lst
+*.map
+*.sym
+
+# build directories
+build/
+bin/
+obj/
+
+# editor/OS junk
+.vscode/
+.DS_Store
