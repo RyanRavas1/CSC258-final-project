@@ -32,25 +32,26 @@ ADDR_KBRD:
 
 # 7 columns x 14 rows = 98 words
 # 0 = empty/ black, 1 = red, 2 = green, 3 = blue, 4 = yellow
+# Currently written with words, not .space for debugging/ testing purposes
 grid:
     .word 1, 2, 3, 4, 1, 2, 3    # Row 0
     .word 2, 3, 4, 1, 2, 3, 4    # Row 1
     .word 3, 4, 1, 2, 3, 4, 1    # Row 2
-    .word 4, 1, 2, 3, 0, 0, 0    # Row 3
-    .word 0, 3, 0, 0, 0, 0, 0    # Row 4
-    .word 0, 3, 0, 0, 0, 0, 0    # Row 5
-    .word 0, 3, 0, 0, 0, 0, 0    # Row 6
-    .word 0, 3, 0, 0, 0, 0, 0    # Row 7
-    .word 0, 3, 0, 0, 0, 0, 0    # Row 8
-    .word 0, 3, 0, 0, 0, 0, 0    # Row 9
-    .word 0, 3, 0, 0, 0, 0, 0    # Row 10
-    .word 0, 3, 0, 0, 0, 0, 0    # Row 11
-    .word 0, 3, 0, 0, 0, 0, 0    # Row 12
-    .word 0, 3, 0, 0, 0, 0, 0    # Row 13
+    .word 0, 0, 0, 0, 0, 0, 0    # Row 3
+    .word 0, 0, 0, 0, 0, 0, 0    # Row 4
+    .word 0, 0, 0, 0, 0, 0, 0    # Row 5
+    .word 0, 0, 0, 0, 0, 0, 0    # Row 6
+    .word 0, 0, 0, 0, 0, 0, 0    # Row 7
+    .word 0, 0, 0, 0, 0, 0, 0    # Row 8
+    .word 0, 0, 0, 0, 0, 0, 0    # Row 9
+    .word 0, 0, 0, 0, 0, 0, 0    # Row 10
+    .word 0, 0, 0, 0, 0, 0, 0    # Row 11
+    .word 0, 0, 0, 0, 0, 0, 0    # Row 12
+    .word 0, 0, 0, 0, 0, 0, 0    # Row 13
 
-curr_pos: .word  2            # Current column position of the character (0-6)
-curr_held: .word 5            # Number of bubbles held
-curr_colour: .word 3          # Same colour IDs as grid (1-4)
+curr_pos: .word  3            # Current column position of the character (0-6)
+curr_held: .word 0            # Number of bubbles held
+curr_colour: .word 1          # Same colour IDs as grid (1-4)
 
 ##############################################################################
 # Code
@@ -60,6 +61,7 @@ curr_colour: .word 3          # Same colour IDs as grid (1-4)
 
     # Run the game.
 main:
+    li $a0, 12                       # number of rows of random bubbles (1-12)
     jal generate_starting_grid
     jal draw_border
     jal draw_grid
@@ -144,14 +146,63 @@ draw_unit:
 
     sw $a2, 0($t9)              # Paint single unit
     jr $ra
+
+###############################################################################
+# generate_starting_grid: generates $a0 many rows of randomly coloured bubbles
+###############################################################################
+generate_starting_grid:
+    addi $sp, $sp, -16                   # Save $ra, $s, $a0 registers on stack
+    sw $ra, 0($sp)                       
+    sw $s0, 4($sp)
+    sw $s1, 8($sp)
+    sw $a0, 12($sp)
+    
+    li $s0, 0                           # Index i = 0
+    li $t0, 7                           # load constant
+    mul $s1, $t0, $a0                   # Generate 7 x $a0 bubbles, 7 cols * $a0 rows
+    la $t0, grid                        # Base address of grid
+
+starting_grid_loop:
+    beq $s0, $s1, starting_grid_done
+
+    jal generate_random_1_to_4         # generate random number 1-4
+    
+    sll $t1, $s0, 2                    # $t1 = i * 4 = Byte offset for the i-th bubble in grid
+    add $t1, $t1, $t0                  # $t1 = exact ram address of i-th bubble in grid
+
+    sw $a0, 0($t1)                     # Put the random number into the corresponding ram address
+
+    addi $s0, $s0, 1                   # i++
+
+    j starting_grid_loop
+
+generate_random_1_to_4:
+    li $v0, 42
+    li $a0, 0
+    li $a1, 4                          # return value is in $a0
+    syscall                            # Generates number 0-3
+
+    addi $a0, $a0, 1                   # Correct number to be between 1-4
+    jr $ra
+
+starting_grid_done:
+    lw $ra, 0($sp)
+    lw $s0, 4($sp)
+    lw $s1, 8($sp)
+    lw $a0, 12($sp)
+    addi $sp, $sp, 16                  # restore $s registers and return to the correct address
+    jr $ra
     
 ##############################################################################
 # draw_grid: Draws a 3x3 bubble for each ID in 'grid' in color $a2
 # Covers a total area of 21x42, offset from the top-left by 4 units
 ##############################################################################
 draw_grid:
-    addi $sp, $sp, -4           # Save return address on stack
+    addi $sp, $sp, -16           # Save return address and $s registers on stack
     sw $ra, 0($sp)
+    sw $s0, 4($sp)
+    sw $s1, 8($sp)
+    sw $s2, 16($sp)
 
     la $s0, grid                # $s0 = pointer to current cell in grid
     li $s1, 0                   # $s1 = cell index i (0 to 97)
@@ -211,7 +262,10 @@ compute_grid_coords:
 
 grid_done:
     lw $ra, 0($sp)
-    addi $sp, $sp, 4
+    lw $s0, 4($sp)
+    lw $s1, 8($sp)
+    lw $s2, 16($sp)
+    addi $sp, $sp, 16             # Restore $s registers and return to correct return address
     jr $ra
   
 ####################################################################################################
@@ -226,22 +280,22 @@ draw_bubble:
     sll $t8, $a1, 6                # $t8 = y * 64
     add $t8, $t8, $a0              # $t8 = (y * 64) + x
     sll $t8, $t8, 2                # $t8 = byte offset = ((y * 64) + x) * 4
-    add $v0, $t8, $t0              # $v0 = top-left ram address
+    add $t9, $t8, $t0              # $t9 = top-left ram address
 
     # Paint Row 0 (y)
-    sw $a2, 0($v0)                 # Col 0
-    sw $a2, 4($v0)                 # Col 1 (+4 bytes)
-    sw $a2, 8($v0)                 # Col 2 (+8 bytes)
+    sw $a2, 0($t9)                 # Col 0
+    sw $a2, 4($t9)                 # Col 1 (+4 bytes)
+    sw $a2, 8($t9)                 # Col 2 (+8 bytes)
 
     # Paint Row 1 (y + 1(256 bytes per row))
-    sw $a2, 256($v0)               # Col 0
-    sw $a2, 260($v0)               # Col 1
-    sw $a2, 264($v0)               # Col 2
+    sw $a2, 256($t9)               # Col 0
+    sw $a2, 260($t9)               # Col 1
+    sw $a2, 264($t9)               # Col 2
 
     # Paint Row 2 (y + 2(256 bytes per row))
-    sw $a2, 512($v0)               # Col 0
-    sw $a2, 516($v0)               # Col 1
-    sw $a2, 520($v0)               # Col 2
+    sw $a2, 512($t9)               # Col 0
+    sw $a2, 516($t9)               # Col 1
+    sw $a2, 520($t9)               # Col 2
 
     jr $ra
 
@@ -250,7 +304,7 @@ draw_bubble:
 # draw_character: Draws a 1x1 pixel below the board in its current position
 ####################################################################################
 draw_character:
-    addi $sp, $sp, -12          # Allocate 12 bytes on stack
+    addi $sp, $sp, -4          # Allocate 12 bytes on stack
     sw $ra, 0($sp)
     
     # Character position:
@@ -268,17 +322,14 @@ draw_character:
     sw $a0, 4($sp)              # Save x_coord on stack
     sw $a1, 8($sp)              # Save y_coord on stack
   
-    j draw_bubble
+    jal draw_bubble
   
-    lw $v0, 4($sp)              # Restore x_coord into $v0
-    lw $v1, 8($sp)              # Restore y_coord into $v1
     lw $ra, 0($sp)
-    addi $sp, $sp, 12
+    addi $sp, $sp, 4
     jr $ra
     
 #################################################################################################
 # draw_held: Draws a n x 1 pixel vertical bar below the character pixel
-# Must run after drawing draw_character bubble to have $v0 = x_coordinate and $v1 = y_coordinate
 #################################################################################################
 draw_held:
     addi $sp, $sp, -16          # Preserve $ra and $s registers
