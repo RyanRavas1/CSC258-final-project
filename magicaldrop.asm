@@ -25,6 +25,23 @@ ADDR_DSPL:
 # The address of the keyboard. Don't forget to connect it!
 ADDR_KBRD:
     .word 0xffff0000
+# Pixel map of word pause, 12 lines tall, spans 64 pixels wide
+# AI was used to generate this grid since it would be extremely tedioius to do so manually
+# Google assistant was used after making a google search for "write 'pause' on 64x64 pixels"
+PAUSE_MENU_GRID:
+    .word 0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0
+    .word 0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,1,1,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0
+    .word 0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0
+    .word 0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0
+    .word 0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,1,1,1,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0
+    .word 0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0
+    .word 0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0
+    .word 0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0
+    .word 0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0
+    .word 0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0
+    .word 0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0
+    .word 0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0
+
 
 ##############################################################################
 # Mutable Data
@@ -61,7 +78,7 @@ curr_colour: .word 1          # Same colour IDs as grid (1-4)
 
     # Run the game.
 main:
-    li $a0, 12                       # number of rows of random bubbles (1-12)
+    li $a0, 12                   # number of rows of random bubbles to generate (1-12)
     jal generate_starting_grid
     jal draw_border
     jal draw_grid
@@ -202,7 +219,8 @@ draw_grid:
     sw $ra, 0($sp)
     sw $s0, 4($sp)
     sw $s1, 8($sp)
-    sw $s2, 16($sp)
+    sw $s2, 12($sp)
+    sw $s3, 16($sp)
 
     la $s0, grid                # $s0 = pointer to current cell in grid
     li $s1, 0                   # $s1 = cell index i (0 to 97)
@@ -264,7 +282,8 @@ grid_done:
     lw $ra, 0($sp)
     lw $s0, 4($sp)
     lw $s1, 8($sp)
-    lw $s2, 16($sp)
+    lw $s2, 12($sp)
+    lw $s3, 16($sp)
     addi $sp, $sp, 16             # Restore $s registers and return to correct return address
     jr $ra
   
@@ -328,9 +347,9 @@ draw_character:
     addi $sp, $sp, 4
     jr $ra
     
-#################################################################################################
+########################################################################
 # draw_held: Draws a n x 1 pixel vertical bar below the character pixel
-#################################################################################################
+########################################################################
 draw_held:
     addi $sp, $sp, -16          # Preserve $ra and $s registers
     sw $ra, 0($sp)
@@ -390,5 +409,101 @@ held_done:
     addi $sp, $sp, 16
     jr $ra
 
+#################################################################################################
+# draw_pause: Draws a pause menu on screen
+# 'Pause' is 12 pixels tall, 26 blank lines above and below it
+#################################################################################################
 
+draw_pause:
+    addi $sp, $sp, -20                   # Save return address and $s registers
+    sw $ra, 0($sp)                 
+    sw $s0, 4($sp)
+    sw $s1, 8($sp)
+    sw $s2, 12($sp)
+    sw $s3, 16($sp)
+
+    lw $t8, ADDR_DSPL
+    li $t9, 0xbb0000
+    sw $t9, 0($t8)
     
+    lw $s0, ADDR_DSPL                    # Base address of display
+    la $s1, PAUSE_MENU_GRID              # Grid of 'pause' pixels
+
+    li $s2, 0                            # Index i = 0
+    li $s3, 768                          # 12 rows x 64 cols = 764 pixels
+    
+    # Base display offset = 6656 = 26 rows x 64 pixels x 4 bytes per pixel
+    addi $s0, $s0, 6656                  # Centre vertically 'pause' 
+    jal wipe_screen
+
+draw_pause_word_loop:
+    beq $s2, $s3, draw_pause_menu_done
+
+    sll $t1, $s2, 2                      # Offset = i * 4   
+
+    add $a0, $t1, $s0                    # Display address = base display address + offset of current pixel
+    add $t2, $t1, $s1                    # Grid address = base grid address + offset of current pixel
+    
+    lw $t4, 0($t2)                       # 0 or 1 if pixel should be drawn white(1) or black(0)
+
+    beq $t4, 0, set_pause_pixel_black
+    beq $t4, 1, set_pause_pixel_white
+    
+    j draw_pause_word_loop
+
+set_pause_pixel_black:
+    li $a1, 0x000000
+    j draw_pause_pixel
+  
+set_pause_pixel_white:
+    li $a1, 0xffffff
+    j draw_pause_pixel
+
+#######################################################
+# draw_pause_pixel: Draws a pixel at $a0 in colour $a1
+#######################################################
+draw_pause_pixel:
+    sw $a1, 0($a0)
+    addi $s2, $s2, 1                     # i++
+    j draw_pause_word_loop
+
+draw_pause_menu_done:  
+    lw $ra, 0($sp)
+    lw $s0, 4($sp)
+    lw $s1, 8($sp)
+    lw $s2, 12($sp)
+    lw $s3, 16($sp)
+    addi $sp, $sp, 20
+    jr $ra
+#######################################################
+# wipe_screen: Makes every pixel black
+#######################################################
+wipe_screen:
+    addi $sp, $sp, -4
+    sw $ra, 0($sp)
+
+    li $t0, 0                        # Index i = 0
+    li $t1, 4096                     # 64x64 = number of pixels
+
+    lw $t2, ADDR_DSPL                # Base display address
+    
+wipe_screen_loop:
+    beq $t0, $t1, wipe_screen_done
+
+    mul $t3, $t0, 4                  # Offset of current pixel
+    add $t3, $t3, $t2                # Address of current pixel
+
+    li $t4, 0x000000                 # black
+
+    sw $t4, 0($t3)                   # Draw pixel
+
+    addi $t0, $t0, 1                 #i++
+    j wipe_screen_loop
+
+wipe_screen_done:
+  lw $ra, 0($sp)
+  addi $sp, $sp, 4
+  jr $ra
+
+
+  
