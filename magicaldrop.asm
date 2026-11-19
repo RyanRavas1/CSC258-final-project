@@ -1,8 +1,8 @@
 ################# CSC258 Assembly Final Project ###################
 # This file contains our implementation of Magical Drop.
 #
-# Student 1: Name, Student Number
-# Student 2: Name, Student Number (if applicable)
+# Student 1: Arthur Xu, 1012306265
+# Student 2: Ryan Ravas, Student Number (if applicable)
 #
 # We assert that the code submitted here is entirely our own 
 # creation, and will indicate otherwise when it is not.
@@ -69,6 +69,7 @@ grid:
 curr_pos: .word  3            # Current column position of the character (0-6)
 curr_held: .word 0            # Number of bubbles held
 curr_colour: .word 1          # Same colour IDs as grid (1-4)
+keyboard_address: .word 0xffff0000
 
 ##############################################################################
 # Code
@@ -85,18 +86,52 @@ main:
     jal draw_character
     jal draw_held
 
+
 game_loop:
+    lw $t0 , keyboard_address       # t0 - base address for keyboard 
+    lw $t8 , 0($t0)                 # Load first word from keyboard
+    beq $t8, 1, keyboard_input      # If first word is 1, key is pressed
+
     # 1a. Check if key has been pressed
-    # 1b. Check which key has been pressed
+    # 1b. Check which key has been pressed2
     # 2a. Check for collisions
 	# 2b. Update locations (capsules)
 	# 3. Draw the screen
 	# 4. Sleep
 
     # 5. Go back to Step 1
-
+    # jal keyboard_address
     j game_loop
 
+keyboard_input:                   # key is pressed
+  lw $t2, 4($t0)                  # Load second word from keyboard 
+  beq $t2, 0x61, input_A          # check if key_a was pressed
+  beq $t2, 0x64, input_D          # check if key_d was pressed
+  j game_loop
+
+input_A:
+  la $t0, curr_pos  
+  lw $t1, 0($t0)
+  beq $t1, 0, game_loop
+  addi $t1, $t1, -1               # update the character's position 1 spot left
+  sw $t1, 0($t0)
+  j redraw
+input_D:
+  la $t0, curr_pos              
+  lw $t1, 0($t0)
+  beq $t1, 6, game_loop
+  addi $t1, $t1, 1                # update the character's position 1 spot right
+  sw $t1, 0($t0)
+  j redraw
+
+redraw:                           # update the character's position in response to loop
+    jal wipe_screen
+    jal draw_border
+    jal draw_grid
+    jal draw_character
+    jal draw_held
+    j game_loop
+      
 
 ##################################################################################################
 # draw_border: Draws a 1-unit white border around the 14x28 (7x14 with each 'ball' 2x2) playfield 
@@ -329,6 +364,7 @@ draw_character:
     # Character position:
     # x_coordinate = (curr_pos + offset(padding))
     # y_coordinate = playfield_height + border(top and bottom) + offset(padding)
+    
     li $a2, 0xffffff            # $a2 = character colour = white
     li $a3, 2                   # padding(top and left) = 2
 
