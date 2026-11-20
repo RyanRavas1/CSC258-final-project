@@ -107,6 +107,7 @@ keyboard_input:                   # key is pressed
   lw $t2, 4($t0)                  # Load second word from keyboard 
   beq $t2, 0x61, input_A          # check if key_a was pressed
   beq $t2, 0x64, input_D          # check if key_d was pressed
+  beq $t2, 0x73, input_S
   j game_loop
 
 input_A:
@@ -116,6 +117,7 @@ input_A:
   addi $t1, $t1, -1               # update the character's position 1 spot left
   sw $t1, 0($t0)
   j redraw
+  
 input_D:
   la $t0, curr_pos              
   lw $t1, 0($t0)
@@ -123,6 +125,60 @@ input_D:
   addi $t1, $t1, 1                # update the character's position 1 spot right
   sw $t1, 0($t0)
   j redraw
+
+
+store_value:                      # increment stored by 1
+  la $t0, curr_held
+  lw $t1, 0($t0)
+  addi $t1, $t1, 1 
+  sw $t1, 0($t0)
+
+  sw $v0, curr_colour
+  j redraw
+
+input_S:
+  jal get_row
+  bgt $v0, 0, store_value
+  j redraw
+
+capture:
+  move $v0, $t3                  # capture the value
+  jr $ra                            # go to return address
+
+cut:
+  li $v0, 0                    # nothing 
+  jr $ra 
+
+cast_row_loop:
+  
+  bltz $a1, cut
+  
+  mul $t0, $a1, 7               
+  add $t1, $t0, $a0
+  sll $t1, $t1, 2                 # calculate the correct index (i*7 + j)*4 
+  
+  la $t2, grid 
+  add $t2, $t2, $t1             # add t1 to offset
+  lw $t3, 0($t2)                # index grid
+  
+  bgt $t3, 0, capture       
+  
+  addi $a1, $a1, -1               # move down a row if not right
+  
+  j cast_row_loop
+  
+get_row:
+  addi $sp, $sp, -4                      # get return address
+  sw $ra, 0($sp)
+
+  la $t0, curr_pos                       # get position
+  lw $a0, 0($t0)
+  li $a1, 13                             # start at top row (13)
+  jal cast_row_loop
+
+  lw $ra, 0($sp)
+  addi $sp, $sp, 4
+  jr $ra
 
 redraw:                           # update the character's position in response to loop
     jal wipe_screen
@@ -132,6 +188,11 @@ redraw:                           # update the character's position in response 
     jal draw_held
     j game_loop
       
+find_closest_in_column:
+  la $t0, curr_pos              
+  lw $t1, 0($t0)                  # we get the current column they are in 
+  
+
 
 ##################################################################################################
 # draw_border: Draws a 1-unit white border around the 14x28 (7x14 with each 'ball' 2x2) playfield 
@@ -425,6 +486,7 @@ set_held_blue:
     j held_draw
 set_held_yellow:
     li $a2, 0xffff00
+    j held_draw
     
 held_draw:
     move $a0, $s2               # x_coord = (curr_pos * 3) + 2
